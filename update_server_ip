@@ -1,0 +1,93 @@
+# coding:utf8
+
+#
+# update server IP to wiki page
+# 
+# yan(a0726h77[AT]gmail.com)
+#
+
+import mwclient
+import sys
+import time
+import datetime
+import os
+import platform
+import signal
+
+WIKI_HOST = '111.222.333.444'
+WIKI_URI = '/wiki/'
+WIKI_USERNAME = 'admin'
+WIKI_PASSWORD = 'admin'
+HOSTNAME = 'MYSERVER'
+
+# update interval (in min)
+UPDATE_INTERVAL = 15
+
+def get_interface_ip(ifname):
+    if "win" in sys.platform or "CYGWIN" in platform.system():
+        exit(100)
+    elif "Linux" in platform.system():
+        import socket
+        import fcntl
+        import struct
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+            s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15])
+        )[20:24])
+
+def main():
+    WIKI_PAGE_NAME = 'SERVER_IP_UPDATE_' + HOSTNAME
+    IP = get_interface_ip(interface)
+    DATETIME = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    site = mwclient.Site(WIKI_HOST, path=WIKI_URI)
+    site.login(WIKI_USERNAME, WIKI_PASSWORD)
+    
+    page = site.Pages[WIKI_PAGE_NAME]
+    #text = page.edit()
+    #print text
+    #page.save(text + u'\nExtra data')
+    content = u'http://%s/\n%s' % (IP, DATETIME)
+    page.save(content)
+
+def exit_handler(signum, frame):
+    os.unlink(pid_filename)
+    print "program exit, remove %s" % pid_filename
+
+if __name__ == "__main__":
+    # this script will run as a daemon, need singal handler
+    signal.signal(signal.SIGINT, exit_handler)
+    signal.signal(signal.SIGTERM, exit_handler)
+
+    global pid_filename
+    pid_filename = '%s.pid' % sys.argv[0]
+    pid = os.getpid()
+
+    # if pid file existed, exit program
+    try:
+        f = open('%s.pid' % sys.argv[0], 'r')
+        f.close()
+        print "Process was running..."
+    except:
+        if len(sys.argv) == 2:
+
+            f = open(pid_filename, 'w')
+            f.write(str(pid))
+            f.close()
+
+            interface = sys.argv[1]
+
+	    try:
+                while True:
+                    main()
+                    time.sleep(UPDATE_INTERVAL * 60)
+	    except:
+                os.kill(pid, signal.SIGINT)
+                exit(20)
+        else:
+            print "Usage : $ python %s IFACE &" % sys.argv[0]
+            exit(10)
+
+    exit(1)

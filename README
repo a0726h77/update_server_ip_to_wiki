@@ -1,0 +1,13 @@
+
+mediawiki api use mwclient library
+
+
+to start :
+    $ python update_server_ip eth0
+
+to stop :
+    $ kill -15 `cat update_server_ip.pid`
+
+
+can see the ip in this link
+    http://server.com/wiki/index.php/SERVER_IP_UPDATE_YOURHOST
